@@ -442,7 +442,7 @@ async function markMot(idx, delta) {
   mk.top = mk.top.filter(t => t.n > 0).sort((a, b) => b.n - a.n);
   render();
   try {
-    const r = await api({ ...state.auth, action: 'mark', title: x.title, delta });
+    const r = await api({ ...state.auth, action: 'mark', id: x.id, title: x.title, delta });
     if (r.ok && r.item) d.motivation[idx] = r.item;
     else { state.markErr = { i: idx, t: r.error || 'Не получилось' }; mk.me -= delta; mk.total -= delta; if (!x.contest) x.fact -= delta; const m2 = mk.top.find(t => nk(t.name) === nk(d.me)); if (m2) m2.n -= delta; mk.top = mk.top.filter(t => t.n > 0); }
   } catch (e) { state.markErr = { i: idx, t: 'Нет связи — отметка не сохранилась' }; mk.me -= delta; mk.total -= delta; if (!x.contest) x.fact -= delta; const m3 = mk.top.find(t => nk(t.name) === nk(d.me)); if (m3) m3.n -= delta; mk.top = mk.top.filter(t => t.n > 0); }
