@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#8c4f30">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DZIRO Зал">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>DZIRO — зал</title>
+<style>
+  :root{
+    --bg:#f0ece9; --card:#fbf8f4; --card2:#efe7dc; --line:#e0d6c8;
+    --text:#3a3935; --muted:#82796c; --cream:#efe7dc;
+    --terra:#8c4f30; --olive:#858059; --sage:#c5c7b4; --forest:#58654f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 'Onest',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  button,select,input{font:inherit;color:inherit}
+  .wrap{max-width:560px;margin:0 auto;padding:0 16px calc(env(safe-area-inset-bottom) + var(--badge-gap) + 96px)}
+  header{display:flex;align-items:center;gap:10px;background:var(--terra);color:var(--cream);
+    margin:0 -16px 20px;padding:calc(env(safe-area-inset-top) + 16px) 16px 16px;border-radius:0 0 22px 22px}
+  header .sp{flex:1}
+  .logo{display:block;height:17px;width:auto}
+  header select{background:rgba(239,231,220,.14);border:1px solid rgba(239,231,220,.3);color:var(--cream);border-radius:12px;padding:7px 10px;font-size:14px}
+  header select option{color:#3a3935}
+  .icon-btn{background:none;border:0;color:rgba(239,231,220,.75);padding:8px 4px;cursor:pointer;font-size:14px}
+  h2{font-size:26px;font-weight:500;letter-spacing:-.01em;margin:4px 0 14px}
+  .hello{color:var(--text);font-size:22px;font-weight:500;letter-spacing:-.01em;margin-top:-6px;margin-bottom:18px}
+  .appbg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+  .appbg .sign{position:absolute;width:max(120vw,480px);height:max(120vw,480px);max-width:820px;max-height:820px;right:-38%;top:22%;fill:none;stroke:#d9773f;stroke-width:2.4;opacity:.22}
+  .wrap{position:relative;z-index:1}
+  .mon{margin-top:14px;border-top:1px solid rgba(239,231,220,.25);padding-top:10px}
+  .mon .mh{font-size:12px;color:var(--sage);margin-bottom:8px;text-transform:uppercase;letter-spacing:.1em}
+  .mon .mr{margin-bottom:10px}
+  .mon .ml{display:flex;justify-content:space-between;font-size:13px;gap:8px}
+  .mon .ml span:first-child{color:var(--sage)}
+  .mon .bar2{height:6px;border-radius:99px;background:rgba(239,231,220,.18);margin:5px 0 3px;overflow:hidden}
+  .mon .bar2 i{display:block;height:100%;background:var(--cream);border-radius:99px}
+  .mon .mleft{font-size:12px;color:var(--cream);opacity:.85}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:10px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 8px;text-align:center}
+  .stat b{display:block;font-size:22px;font-weight:500;color:var(--terra)}
+  .stat span{font-size:12px;color:var(--muted)}
+  .shift{display:flex;align-items:center;gap:14px}
+  .date{width:52px;text-align:center;flex:none}
+  .date b{display:block;font-size:22px;font-weight:500;line-height:1}
+  .date span{font-size:12px;color:var(--muted)}
+  .shift .info{flex:1;min-width:0}
+  .shift .pos{font-weight:500}
+  .shift .time{color:var(--muted);font-size:14px}
+  .hrs{font-size:13px;color:var(--olive);flex:none}
+  .today{background:var(--card2);border-color:var(--terra)}
+  .past{opacity:.5}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--sage);color:var(--text);margin-left:6px;vertical-align:middle}
+  .tag.now{background:var(--terra);color:var(--cream)}
+  .sec{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--olive);margin:20px 2px 8px}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin:0 -16px 12px;padding-left:16px;padding-right:16px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;width:50px;padding:8px 0;border-radius:16px;background:var(--card);border:1px solid var(--line);text-align:center;cursor:pointer}
+  .chip b{display:block;font-size:17px;font-weight:500}
+  .chip span{font-size:11px;color:var(--muted)}
+  .chip.sel{background:var(--terra);border-color:var(--terra);color:var(--cream)}
+  .chip.sel span{color:var(--cream);opacity:.8}
+  .chip.td{border-color:var(--terra)}
+  .grp{margin-bottom:12px}
+  .grp h4{margin:0 0 6px;font-size:12px;color:var(--olive);font-weight:500;text-transform:uppercase;letter-spacing:.1em}
+  .person{display:flex;justify-content:space-between;padding:10px 14px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:6px}
+  .person.me{background:var(--card2);border-color:var(--terra)}
+  .person .t{color:var(--muted);font-size:14px}
+  .big{font-size:36px;font-weight:500;letter-spacing:-.02em;color:var(--terra);margin:2px 0}
+  .note{font-size:12px;color:var(--muted)}
+  .rows .r{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+  .rows .r:last-child{border:0}
+  .rows .r span{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:9px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;white-space:normal}
+  th{color:var(--muted);font-weight:400;font-size:12px}
+  .bars{display:flex;align-items:flex-end;gap:3px;height:110px;margin-top:10px}
+  .bar{flex:1;background:var(--olive);border-radius:4px 4px 0 0;min-height:2px}
+  .bar.we{background:var(--terra)}
+  .bar.empty{background:var(--sage);opacity:.5}
+  .axis{display:flex;gap:3px;font-size:9px;color:var(--muted);margin-top:4px}
+  .axis span{flex:1;text-align:center}
+  :root{--badge-gap:12px}
+  nav{position:fixed;z-index:10;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + var(--badge-gap));max-width:536px;margin:0 auto;background:rgba(251,248,244,.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:24px;box-shadow:0 8px 28px rgba(58,57,53,.14);display:flex;justify-content:center;padding:4px}
+  nav .in{display:flex;width:100%}
+  nav button{flex:1;min-width:0;background:none;border:0;padding:8px 0;color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:clip;cursor:pointer}
+  nav.many button{font-size:9.5px;letter-spacing:-.02em}
+  nav button svg{display:block;width:22px;height:22px;margin:0 auto 3px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  nav button.on{color:var(--terra)}
+  .login{position:fixed;inset:0;background:var(--forest);color:var(--cream);overflow:auto;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px}
+  .login .box{width:100%;max-width:380px;position:relative;z-index:1}
+  .login .bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+  .login .sign{position:absolute;width:max(135vw,560px);height:max(135vw,560px);max-width:1100px;max-height:1100px;right:-48%;bottom:-24%;
+    fill:none;stroke:var(--cream);stroke-width:2.6;opacity:.13;animation:spin 180s linear infinite}
+  .login .sign.s2{width:max(60vw,260px);height:max(60vw,260px);max-width:520px;max-height:520px;left:-22%;top:-10%;right:auto;bottom:auto;opacity:.08;animation-direction:reverse;animation-duration:240s}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.login .sign{animation:none}}
+  .login .pill{display:inline-block;font-size:14px;padding:8px 18px;border-radius:12px;background:rgba(239,231,220,.1);border:1px solid rgba(239,231,220,.15);margin-bottom:40px}
+  .login .logo{height:34px;margin-bottom:18px}
+  .login p{color:var(--sage);margin:0 0 30px;font-size:19px;line-height:1.3}
+  .login select,.login input{width:100%;padding:15px;border-radius:14px;background:rgba(239,231,220,.1);border:1px solid rgba(239,231,220,.25);margin-bottom:10px;font-size:17px;color:var(--cream)}
+  .login select option{color:#3a3935}
+  .login input{letter-spacing:.5em;text-align:center}
+  .login input::placeholder{color:var(--sage);letter-spacing:.1em}
+  .btn{width:100%;padding:15px;border-radius:14px;border:0;background:var(--cream);color:var(--text);font-weight:500;font-size:17px;cursor:pointer}
+  .btn:disabled{opacity:.5}
+  .err{color:#f0b9a4;text-align:center;min-height:22px;font-size:14px;margin-top:10px}
+  .pill{flex:none;font-size:11px;font-weight:500;padding:4px 9px;border-radius:99px;letter-spacing:.02em}
+  .pill.good{background:var(--sage);color:var(--text)}
+  .pill.bad{background:var(--terra);color:var(--cream)}
+  .pass{display:flex;align-items:center;gap:12px}
+  .pass .info{flex:1;min-width:0}
+  .pass .pos{font-weight:400;font-size:15px;line-height:1.3}
+  .pass .time{color:var(--muted);font-size:12px;margin-top:2px}
+  .vac{border-style:dashed;border-color:var(--olive)}
+  .teamrow{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+  .teamrow .n{font-weight:500}
+  .teamrow .c{color:var(--muted);font-size:14px;white-space:nowrap}
+  .teamrow .c b{font-weight:500}
+  .teamrow .c .g{color:var(--olive)} .teamrow .c .b{color:var(--terra)}
+  .teamdet{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .teamdet .pass{padding:8px 0}
+  .empty{color:var(--muted);text-align:center;padding:30px 0}
+  .spin{text-align:center;color:var(--muted);padding:60px 0}
+  .plan{background:var(--forest);color:var(--cream);border:0}
+  .plan .ph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .plan .ph b{font-weight:500;font-size:16px}
+  .plan .ph span{color:var(--sage);font-size:13px}
+  .plan .ps{display:flex;gap:8px;margin-bottom:12px}
+  .plan .ps div{flex:1;background:rgba(239,231,220,.12);border-radius:12px;padding:10px 6px;text-align:center}
+  .plan .ps b{display:block;font-size:22px;font-weight:500}
+  .plan .ps span{font-size:11px;color:var(--sage)}
+  .plan .lbl{font-size:12px;color:var(--sage);margin:10px 0 6px}
+  .plan .chips2{display:flex;flex-wrap:wrap;gap:6px}
+  .plan .chips2 i{font-style:normal;font-size:13px;padding:5px 11px;border-radius:99px;background:rgba(239,231,220,.14);border:1px solid rgba(239,231,220,.2)}
+  .plan .pn{font-size:14px;line-height:1.4;margin-top:4px}
+  .plan.dept{background:var(--olive)}
+  .mot .mt{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .mot .mt b{font-weight:500;font-size:17px;line-height:1.3}
+  .mot .cond{color:var(--muted);font-size:14px;margin-top:4px}
+  .mot .rw{display:inline-block;margin-top:10px;background:var(--terra);color:var(--cream);border-radius:12px;padding:6px 12px;font-size:14px}
+  .mot .rw span{opacity:.75;font-size:12px;margin-right:6px}
+  .mot .pr{margin-top:12px}
+  .mot .pl{display:flex;justify-content:space-between;font-size:13px}
+  .mot .pl span{color:var(--muted)}
+  .mot .pb{height:7px;border-radius:99px;background:var(--card2);margin:5px 0 3px;overflow:hidden}
+  .mot .pb i{display:block;height:100%;background:var(--olive);border-radius:99px}
+  .mot .pb i.done{background:var(--forest)}
+  .mot .meta{font-size:12px;color:var(--muted);margin-top:8px}
+  .mot.contest{border-color:var(--olive)}
+  .train{border-color:var(--olive);background:linear-gradient(0deg,rgba(197,199,180,.22),rgba(197,199,180,.22)),var(--card)}
+  .train .pos .tag{background:var(--olive);color:var(--cream)}
+  .train a{color:var(--terra);font-size:13px;text-decoration:none;border-bottom:1px solid rgba(140,79,48,.35)}
+  .person.tr{border-color:var(--olive)}
+  .tag.tr{background:var(--card2);color:var(--muted)}
+  .short{background:var(--card2);border-color:var(--terra)}
+  .short b{color:var(--terra);font-weight:500}
+  /* ===== Тема зала: терракота на светлом ===== */
+  :root{--bg:#fbf8f4;--card:#ffffff;--card2:#f6ece4;--line:#eadfd4;--muted:#8a7f74;--orange:#d9773f}
+  .stat b{color:var(--terra)}
+  .chip.sel{background:var(--terra);border-color:var(--terra)}
+  .today{background:var(--card2);border-color:var(--terra)}
+  .login{background:#fffdfb;color:var(--text)}
+  .login .sign{stroke:var(--orange);opacity:.28}
+  .login .sign.s2{opacity:.16}
+  .login .logo{filter:brightness(.28)}
+  .login p{color:var(--terra)}
+  .login select,.login input{background:#fff;border:1px solid var(--line);color:var(--text)}
+  .login input::placeholder{color:var(--muted)}
+  .login .btn,.btn{background:var(--terra);color:#fff}
+  .err{color:var(--terra)}
+  .plan{background:var(--terra)}
+  .plan.dept{background:#b8683f}
+  .plan .ph span,.plan .lbl,.plan .ps span,.mon .ml span:first-child,.mon .mh{color:#f6dccb}
+  .bar{background:var(--terra)}
+  .mot .pb i{background:var(--terra)} .mot .pb i.done{background:var(--olive)}
+  .mot.contest{border-color:var(--terra)}
+  .pill.good{background:#e9dccb}
+  .tag{background:var(--card2);color:var(--terra)}
+  .tag.now{background:var(--terra);color:#fff}
+  .vac{border-color:var(--terra)}
+  .sec,.grp h4{color:var(--terra)}
+  .train{border-color:var(--orange);background:linear-gradient(0deg,rgba(217,119,63,.08),rgba(217,119,63,.08)),var(--card)}
+  .appbg .sign{opacity:.16}
+  .hrs{color:var(--terra)}
+</style>
+</head>
+<body>
+<div class="appbg" id="appbg"></div>
+<div class="wrap" id="app"><div class="spin">Загрузка…</div></div>
+<nav id="nav" hidden><div class="in" id="navIn"></div></nav>
+
+<script>
+/* ====== Ссылка веб-приложения Apps Script ====== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbyXBZ1ClQeVdSqHyTgh3GE33rwHMVqYmsGuuT0hEQvHdi9hdWH-V0FetkvTWTMzKgdM7w/exec';
+/* =============================================== */
+
+const LS = 'dziro_zal_auth';
+const LOGO = '<img class="logo" src="logo.png" alt="DZIRO">';
+const SIGN = '<svg class="sign SIGNCLS" viewBox="40 40 448 448" aria-hidden="true"><circle cx="264" cy="172" r="120"/><circle cx="264" cy="356" r="120"/><circle cx="172" cy="264" r="120"/><circle cx="356" cy="264" r="120"/></svg>';
+const ICON = {
+  my:'<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>',
+  all:'<svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.5 5.5-4.5s4.9 1.5 5.5 4.5"/><circle cx="17" cy="10" r="2.4"/><path d="M16.5 14.6c2.2 0 3.7 1.2 4.2 3.4"/></svg>',
+  pay:'<svg viewBox="0 0 24 24"><rect x="3.5" y="6" width="17" height="12" rx="3"/><circle cx="12" cy="12" r="2.6"/></svg>',
+  resp:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>',
+  plans:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r=".8"/></svg>',
+  motiv:'<svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1.5A3 3 0 0 0 8 10.5M16 6h3v1.5a3 3 0 0 1-3 3"/><path d="M12 13v4M8.5 20h7M10 17h4v3h-4z"/></svg>',
+  team:'<svg viewBox="0 0 24 24"><path d="M5 19V11M12 19V5M19 19v-6"/></svg>'
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rub = n => Math.round(n).toLocaleString('ru-RU') + ' ₽';
+const fmtH = n => (Math.round(n * 10) / 10).toLocaleString('ru-RU');
+const toDate = s => { const [d, m, y] = s.split('.').map(Number); return new Date(y, m - 1, d); };
+const DAY_SHIFT_H = 6; // до 06:00 считаем, что идёт смена предыдущего дня
+const todayStr = () => { const t = new Date(Date.now() - DAY_SHIFT_H * 36e5); return [t.getDate(), t.getMonth() + 1].map(x => String(x).padStart(2, '0')).join('.') + '.' + t.getFullYear(); };
+const isOff = s => /выходн/i.test(s.pos);
+const ORDER = ['Менеджер', 'Хост', 'Фулл', 'Утро', 'Вечер'];
+const posRank = p => { const i = ORDER.findIndex(x => String(p).startsWith(x)); return i < 0 ? 50 : i; };
+
+let state = { auth: null, data: null, view: 'my', day: null };
+
+async function api(body) {
+  if (!API_URL) throw new Error('Не указан API_URL в index.html');
+  const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ ...body, app: 'zal' }) });
+  return r.json();
+}
+
+/* ---------- Вход ---------- */
+async function showLogin(msg) {
+  $('#nav').hidden = true;
+  $('#app').innerHTML = `<div class="login">
+    <div class="bg">${SIGN.replace('SIGNCLS', '')}${SIGN.replace('SIGNCLS', 's2')}</div>
+    <div class="box">${LOGO}<p>Найди свой икигай</p>
+    <select id="lname"><option value="">Загружаю имена…</option></select>
+    <input id="lpin" type="password" inputmode="numeric" maxlength="6" placeholder="Тайная печать" autocomplete="current-password">
+    <button class="btn" id="lgo">Войти</button>
+    <div class="err" id="lerr">${esc(msg || '')}</div></div></div>`;
+  try {
+    const r = await api({ action: 'names' });
+    $('#lname').innerHTML = '<option value="">Кто ты, Путник?</option>' + r.names.map(n => `<option>${esc(n)}</option>`).join('');
+  } catch (e) { $('#lerr').textContent = e.message; }
+  const go = async () => {
+    const name = $('#lname').value, pin = $('#lpin').value.trim();
+    if (!name || !pin) { $('#lerr').textContent = 'Выбери имя и введи тайную печать'; return; }
+    $('#lgo').disabled = true; $('#lerr').textContent = '';
+    try {
+      const d = await api({ name, pin });
+      if (!d.ok) { $('#lerr').textContent = d.error; $('#lgo').disabled = false; return; }
+      state.auth = { name, pin };
+      try { localStorage.setItem(LS, JSON.stringify(state.auth)); } catch (e) {}
+      setData(d);
+    } catch (e) { $('#lerr').textContent = 'Нет связи с сервером'; $('#lgo').disabled = false; }
+  };
+  $('#lgo').onclick = go;
+  $('#lpin').onkeydown = e => { if (e.key === 'Enter') go(); };
+}
+
+function logout() { try { localStorage.removeItem(LS); } catch (e) {} state = { auth: null, data: null, view: 'my', day: null }; showLogin(); }
+
+async function load(tab) {
+  $('#app').innerHTML = '<div class="spin">Загрузка…</div>';
+  try {
+    const d = await api({ ...state.auth, tab });
+    if (!d.ok) return showLogin(d.error);
+    setData(d);
+  } catch (e) { $('#app').innerHTML = `<div class="empty">Нет связи с сервером<br><br><button class="btn" onclick="load()">Повторить</button></div>`; }
+}
+
+function setData(d) {
+  state.data = d;
+  const days = [...new Set(d.shifts.map(s => s.date))];
+  state.day = days.includes(todayStr()) ? todayStr() : days[0];
+  if (state.view === 'team' && !d.isAdmin) state.view = 'my';
+  render();
+}
+
+/* ---------- Отрисовка ---------- */
+function render() {
+  const d = state.data;
+  const tabs = [['my', ICON.my, 'Смены'], ['all', ICON.all, 'График'], ['plans', ICON.plans, 'Планы'], ['motiv', ICON.motiv, 'Мотивация'], ['pay', ICON.pay, 'Зарплата'], ['resp', ICON.resp, 'Пассы']];
+  if (d.isAdmin) tabs.push(['team', ICON.team, 'Команда']);
+  $('#navIn').innerHTML = tabs.map(([k, i, t]) => `<button class="${state.view === k ? 'on' : ''}" onclick="go('${k}')">${i}${t}</button>`).join('');
+  $('#nav').hidden = false; $('#nav').classList.toggle('many', tabs.length > 6);
+  const head = `<header>${LOGO}<span class="sp"></span>
+    <select onchange="load(this.value)">${d.months.map(m => `<option ${m === d.tab ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
+    <button class="icon-btn" onclick="logout()">Выйти</button></header>`;
+  const body = { my: viewMy, all: viewAll, plans: viewPlans, motiv: viewMotiv, pay: viewPay, resp: viewResp, team: viewTeam }[state.view]();
+  $('#app').innerHTML = head + body;
+  const sel = document.querySelector('.chip.sel'); if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+function go(v) { state.view = v; render(); window.scrollTo(0, 0); }
+function pickDay(dt) { state.day = dt; render(); }
+
+const coverDay = (v, ds) => { const t = toDate(ds); return toDate(v.from) <= t && t <= toDate(v.to); };
+function vacCard(v) {
+  const a = toDate(v.from), b = toDate(v.to), n = Math.round((b - a) / 864e5) + 1;
+  return `<div class="card shift vac"><div class="date"><b>${a.getDate()}</b><span>${a.toLocaleDateString('ru-RU', { month: 'short' }).replace('.', '')}</span></div>
+    <div class="info"><div class="pos">${esc(v.type || 'Отпуск')}</div><div class="time">${esc(v.from.slice(0, 5))} – ${esc(v.to.slice(0, 5))}${v.comment ? ' · ' + esc(v.comment) : ''}</div></div>
+    <div class="hrs">${n} дн.</div></div>`;
+}
+
+function trainCard(t, cls = '') {
+  const dt = toDate(t.date);
+  const time = t.from ? esc(t.from) + (t.to ? ' – ' + esc(t.to) : '') : '';
+  const extra = [t.lead ? 'ведёт ' + esc(t.lead) : '', esc(t.place)].filter(Boolean).join(' · ');
+  return `<div class="card shift train ${cls}"><div class="date"><b>${dt.getDate()}</b><span>${['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][dt.getDay()]}</span></div>
+    <div class="info"><div class="pos">${esc(t.topic)}</div>
+    <div class="time">${[time, extra].filter(Boolean).join(' · ')}</div>
+    ${t.note ? `<div class="time">${esc(t.note)}</div>` : ''}
+    ${t.link ? `<div style="margin-top:4px"><a href="${esc(t.link)}" target="_blank" rel="noopener">Материалы</a></div>` : ''}</div></div>`;
+}
+function shiftCard(s, cls = '') {
+  const dt = toDate(s.date), t = todayStr() === s.date;
+  const time = [s.zone ? esc(s.zone) : '', s.from ? `${esc(s.from)} – ${esc(s.to)}` : ''].filter(Boolean).join(' · ');
+  return `<div class="card shift ${cls} ${t ? 'today' : ''}">
+    <div class="date"><b>${dt.getDate()}</b><span>${esc(s.dow)}</span></div>
+    <div class="info"><div class="pos">${esc(s.pos || 'Смена')}${t ? '<span class="tag now">сегодня</span>' : ''}</div><div class="time">${time}</div></div>
+    ${s.hours ? `<div class="hrs">${fmtH(s.hours)} ч</div>` : ''}</div>`;
+}
+
+const nk = n => String(n || '').toLowerCase().replace(/ё/g, 'е').split(/\s+/).filter(Boolean).sort().join(' ');
+function monBlock(m) {
+  if (!m || !m.list || !m.list.length) return '';
+  const f = (x, money) => money ? rub(x) : Math.round(x).toLocaleString('ru-RU');
+  const row = x => {
+    const pct = x.plan > 0 ? x.fact / x.plan * 100 : 0, left = Math.max(x.plan - x.fact, 0);
+    const tail = x.sum ? (left > 0 ? 'осталось ' + f(left, x.money) : 'план выполнен') + ' · ' + Math.round(pct) + '%' : Math.round(pct) + '% от плана';
+    return `<div class="mr"><div class="ml"><span>${esc(x.name)}</span><b>${f(x.fact, x.money)} / ${f(x.plan, x.money)}</b></div>
+      <div class="bar2"><i style="width:${Math.min(100, pct)}%"></i></div><div class="mleft">${tail}</div></div>`;
+  };
+  return `<div class="card plan dept"><div class="ph"><b>Выполнение плана ресторана</b><span>${esc(m.title || '')}</span></div><div class="mon" style="margin-top:0;border:0;padding-top:0">${m.list.map(row).join('')}</div></div>`;
+}
+
+function planCard(p, showWho) {
+  const dt = toDate(p.date), t = todayStr() === p.date;
+  const lab = t ? 'Сегодня' : dt.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  const money = v => /^[\d\s.,]+$/.test(String(v).trim()) ? rub(Number(String(v).replace(/\s/g, '').replace(',', '.'))) : String(v);
+  const stats = [[p.rev, 'выручка'], [p.avg, 'средний чек']].filter(x => x[0]);
+  const chips = s => String(s || '').split(',').map(x => x.trim()).filter(Boolean).map(x => `<i>${esc(x)}</i>`).join('');
+  const title = p.dept ? 'Общий план зала' : (showWho ? esc(p.who) : 'План на смену');
+  return `<div class="card plan ${p.dept ? 'dept' : ''}"><div class="ph"><b>${title}</b><span>${esc(lab)}</span></div>
+    ${stats.length ? `<div class="ps">${stats.map(x => `<div><b style="font-size:18px">${esc(money(x[0]))}</b><span>${x[1]}</span></div>`).join('')}</div>` : ''}
+    ${p.positions ? `<div class="lbl">Обязательные позиции</div><div class="chips2">${chips(p.positions)}</div>` : ''}
+    ${p.note ? `<div class="lbl">Заметка</div><div class="pn">${esc(p.note)}</div>` : ''}</div>`;
+}
+
+function viewPlans() {
+  const d = state.data, me = d.me, today = toDate(todayStr());
+  const all = (d.plans || []).filter(p => toDate(p.date) >= today);
+  const mine = d.isAdmin ? all : all.filter(p => p.dept || nk(p.who) === nk(me));
+  let h = `<h2>Планы</h2>`;
+  const td = mine.filter(p => p.date === todayStr()), next = mine.filter(p => p.date !== todayStr());
+  const ord = (a, b) => (b.dept - a.dept) || (nk(a.who) === nk(me) ? -1 : nk(b.who) === nk(me) ? 1 : a.who.localeCompare(b.who));
+  if (td.length) h += '<div class="sec">Сегодня</div>' + td.sort(ord).map(p => planCard(p, d.isAdmin || p.dept ? true : false)).join('');
+  else h += '<div class="card"><div class="note">На сегодня план не выставлен</div></div>';
+  h += monBlock(d.month);
+  if (next.length) h += '<div class="sec">Впереди</div>' + next.sort((a, b) => toDate(a.date) - toDate(b.date) || ord(a, b)).map(p => planCard(p, d.isAdmin)).join('');
+  return h;
+}
+
+function motCard(x, isAdmin) {
+  const n = v => Math.round(v).toLocaleString('ru-RU');
+  const fmt = v => x.unit === '₽' ? rub(v) : n(v) + (x.unit ? ' ' + esc(x.unit) : '');
+  const pct = x.goal > 0 ? x.fact / x.goal * 100 : 0, left = Math.max(x.goal - x.fact, 0);
+  const tags = (x.soon ? '<span class="tag">скоро</span>' : '') + (x.auto ? '<span class="tag">из РНП</span>' : '') + (isAdmin && x.who ? `<span class="tag">${esc(x.who)}</span>` : '');
+  const dates = x.from && x.to ? `${esc(x.from.slice(0, 5))} – ${esc(x.to.slice(0, 5))}` : x.to ? 'до ' + esc(x.to.slice(0, 5)) : '';
+  return `<div class="card mot ${x.type.toLowerCase().indexOf('конкурс') === 0 ? 'contest' : ''}">
+    <div class="mt"><b>${esc(x.title)}</b><div style="flex:none">${tags}</div></div>
+    ${x.cond ? `<div class="cond">${esc(x.cond)}</div>` : ''}
+    ${x.reward ? `<div class="rw"><span>Награда</span>${esc(x.reward)}</div>` : ''}
+    ${x.goal > 0 ? `<div class="pr"><div class="pl"><span>Прогресс</span><b>${fmt(x.fact)} / ${fmt(x.goal)}</b></div>
+      <div class="pb"><i class="${pct >= 100 ? 'done' : ''}" style="width:${Math.min(100, pct)}%"></i></div>
+      <div class="meta" style="margin-top:0">${left > 0 ? 'осталось ' + fmt(left) : 'выполнено!'} · ${Math.round(pct)}%</div></div>` : ''}
+    ${dates || x.note ? `<div class="meta">${dates}${dates && x.note ? ' · ' : ''}${esc(x.note)}</div>` : ''}</div>`;
+}
+function viewMotiv() {
+  const d = state.data, list = d.motivation || [];
+  const isC = x => String(x.type).toLowerCase().indexOf('конкурс') === 0;
+  const bon = list.filter(x => !isC(x)), con = list.filter(isC);
+  let h = '<h2>Мотивация</h2>';
+  if (!list.length) return h + '<div class="empty">Сейчас нет активных бонусов и конкурсов</div>';
+  if (bon.length) h += '<div class="sec">Бонусы за план</div>' + bon.map(x => motCard(x, d.isAdmin)).join('');
+  if (con.length) h += '<div class="sec">Конкурсы и акции</div>' + con.map(x => motCard(x, d.isAdmin)).join('');
+  return h;
+}
+
+function viewMy() {
+  const d = state.data, me = d.me, today = toDate(todayStr());
+  const mine = d.shifts.filter(s => s.name === me).sort((a, b) => toDate(a.date) - toDate(b.date));
+  const work = mine.filter(s => !isOff(s));
+  const next = mine.filter(s => toDate(s.date) >= today), past = mine.filter(s => toDate(s.date) < today);
+  const hours = (d.hours && d.hours[me] != null && d.hours[me] > 0) ? d.hours[me] : work.reduce((a, s) => a + s.hours, 0);
+  const left = work.filter(s => toDate(s.date) >= today).length;
+  let h = `<h2>Мои смены</h2><div class="hello">${esc(me)}</div>
+    <div class="stats"><div class="stat"><b>${work.length}</b><span>смен в месяце</span></div>
+    <div class="stat"><b>${fmtH(hours)}</b><span>часов</span></div>
+    <div class="stat"><b>${left}</b><span>осталось</span></div></div>`;
+  const myVac = (d.vacations || []).filter(v => v.name === me && toDate(v.to) >= today).sort((a, b) => toDate(a.from) - toDate(b.from));
+  if (myVac.length) h += '<div class="sec">Отпуск и выходные</div>' + myVac.map(vacCard).join('');
+  const tr = (d.trainings || []).filter(t => t.mine);
+  const mix = (sh, trs, rev) => [...sh.map(s => ({ d: toDate(s.date), k: 0, s })), ...trs.map(t => ({ d: toDate(t.date), k: 1, t }))]
+    .sort((a, b) => rev ? (b.d - a.d || b.k - a.k) : (a.d - b.d || a.k - b.k));
+  const trNext = tr.filter(t => toDate(t.date) >= today), trPast = tr.filter(t => toDate(t.date) < today && toDate(t.date).getMonth() === today.getMonth());
+  if (!mine.length && !trNext.length) return h + '<div class="empty">В этом месяце смен нет</div>';
+  if (next.length || trNext.length) h += '<div class="sec">Впереди</div>' + mix(next, trNext).map(x => x.k ? trainCard(x.t) : shiftCard(x.s, isOff(x.s) ? 'past' : '')).join('');
+  if (past.length || trPast.length) h += '<div class="sec">Прошли</div>' + mix(past, trPast, true).map(x => x.k ? trainCard(x.t, 'past') : shiftCard(x.s, 'past')).join('');
+  return h;
+}
+
+function viewAll() {
+  const d = state.data;
+  const days = [...new Set(d.shifts.map(s => s.date))].sort((a, b) => toDate(a) - toDate(b));
+  const chips = days.map(dt => { const s = d.shifts.find(x => x.date === dt);
+    return `<div class="chip ${dt === state.day ? 'sel' : ''} ${dt === todayStr() ? 'td' : ''}" onclick="pickDay('${dt}')"><b>${toDate(dt).getDate()}</b><span>${esc(s.dow)}</span></div>`; }).join('');
+  const list = d.shifts.filter(s => s.date === state.day);
+  const work = list.filter(s => !isOff(s)).sort((a, b) => posRank(a.pos) - posRank(b.pos) || String(a.from).localeCompare(String(b.from)) || String(a.zone).localeCompare(String(b.zone)));
+  const off = list.filter(isOff);
+  const groups = {};
+  work.forEach(s => { const g = s.block === 'm' ? 'Менеджеры' : s.pos; (groups[g] = groups[g] || []).push(s); });
+  const dt = toDate(state.day);
+  let h = `<h2>График</h2><div class="chips">${chips}</div>
+    <div class="hello" style="font-size:15px;color:var(--muted);font-weight:400">${dt.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })} · на смене ${work.length}</div>`;
+  const sh = (d.shortage || {})[state.day];
+  if (sh) h += `<div class="card short"><div class="note">Не хватает на смену</div><b>${esc(sh)}</b></div>`;
+  if (!work.length) h += '<div class="empty">Никого не стоит</div>';
+  Object.entries(groups).forEach(([pos, arr]) => {
+    h += `<div class="grp"><h4>${esc(pos)}</h4>` + arr.map(s => `<div class="person ${s.name === d.me ? 'me' : ''}"><span>${esc(s.name)}${s.block === 't' ? ' <span class="tag tr">стажёр</span>' : ''}${s.block === 'm' ? `<br><span class="t">${esc(s.pos.replace('Менеджер: ', ''))}</span>` : ''}</span><span class="t">${[s.zone ? esc(s.zone) : '', s.from ? esc(s.from) + ' – ' + esc(s.to) : ''].filter(Boolean).join(' · ')}</span></div>`).join('') + '</div>';
+  });
+  const vac = (d.vacations || []).filter(v => coverDay(v, state.day));
+  if (vac.length) h += `<div class="grp"><h4>Отпуск</h4>` + vac.map(v => `<div class="person ${v.name === d.me ? 'me' : ''}"><span>${esc(v.name)}</span><span class="t">${esc(v.type || 'Отпуск')}</span></div>`).join('') + '</div>';
+  const trd = (d.trainings || []).filter(t => t.date === state.day);
+  if (trd.length) h += `<div class="grp"><h4>Мероприятия</h4>` + trd.map(t => `<div class="person tr ${t.mine ? 'me' : ''}"><span>${esc(t.topic)}<br><span class="t">${esc(t.who)}${t.lead ? ' · ведёт ' + esc(t.lead) : ''}</span></span><span class="t">${t.from ? esc(t.from) + (t.to ? ' – ' + esc(t.to) : '') : ''}</span></div>`).join('') + '</div>';
+  if (off.length) h += `<div class="grp"><h4 style="color:var(--muted)">Выходной</h4><div class="note">${off.map(s => esc(s.name)).join(', ')}</div></div>`;
+  return h;
+}
+
+function payCard(p, rules) {
+  const rule = (rules || {})[String(p.role || '').toLowerCase()];
+  return `<div class="card"><div class="note">Начислено за месяц (предварительно, по табелю)</div>
+    <div class="big">${rub(p.total)}</div>
+    <div class="note">${esc(p.role || '')}${rule ? ' · ' + esc(rule) : ''}</div></div>
+    <div class="card rows">
+      ${p.hoursS != null ? `<div class="r"><span>Часы спутником</span><b>${fmtH(p.hoursS)}</b></div><div class="r"><span>Часы хостом</span><b>${fmtH(p.hoursH)}</b></div>` : ''}
+      <div class="r"><span>Часы всего</span><b>${fmtH(p.hours)}</b></div>
+      ${p.revenue ? `<div class="r"><span>Личная выручка</span><b>${rub(p.revenue)}</b></div>` : ''}
+      ${p.rate ? `<div class="r"><span>Ставка в час</span><b>${rub(p.rate)}</b></div>` : ''}
+    </div>`;
+}
+
+function viewPay() {
+  const d = state.data, mine = (d.pay || []).filter(x => nk(x.name) === nk(d.me));
+  let h = `<h2>Зарплата</h2><div class="hello" style="font-size:15px;color:var(--muted);font-weight:400">${esc(d.title)}</div>`;
+  if (!mine.length) return h + '<div class="empty">Расчёт пока не готов</div>';
+  mine.forEach(p => { h += payCard(p, d.payRules); });
+  return h;
+}
+
+function entryList(list) {
+  return list.map(e => `<div class="card pass"><span class="pill ${e.t === 'G' ? 'good' : 'bad'}">${e.t === 'G' ? 'Good' : 'Bad'}</span>
+    <div class="info"><div class="pos">${esc(e.s)}</div><div class="time">${esc(e.d)}${e.n ? ' · №' + esc(e.n) : ''}${e.b ? ' · ' + esc(e.b) : ''}</div></div>
+    ${Number(e.r) > 0 ? `<div class="hrs">${rub(Number(e.r))}</div>` : ''}</div>`).join('');
+}
+function toggleTeam(i) { state.openTeam = state.openTeam === i ? null : i; render(); }
+
+function viewResp() {
+  const d = state.data, r = d.resp;
+  let h = `<h2>Пассы</h2><div class="hello">${esc(d.title)}</div>`;
+  if (!r || !r.ok) return h + '<div class="empty">Данные пока недоступны</div>';
+  h += `<div class="stats"><div class="stat"><b style="color:var(--olive)">${r.sum.good}</b><span>Good Pass</span></div>
+    <div class="stat"><b>${r.sum.bad}</b><span>Bad Pass</span></div>
+    <div class="stat"><b style="font-size:17px;line-height:1.9">${rub(r.sum.sum)}</b><span>удержано</span></div></div>`;
+  h += r.entries.length ? entryList(r.entries) : '<div class="empty">В этом месяце записей нет</div>';
+  if (r.team) {
+    h += '<div class="sec">Вся команда</div>';
+    h += r.team.map((t, i) => `<div class="card"><div class="teamrow" onclick="toggleTeam(${i})"><span class="n">${esc(t.name)}</span>
+      <span class="c"><b class="g">${t.good}</b> / <b class="b">${t.bad}</b>${t.sum ? ' · ' + rub(t.sum) : ''}</span></div>
+      ${state.openTeam === i ? `<div class="teamdet">${entryList(t.entries)}</div>` : ''}</div>`).join('');
+  }
+  return h;
+}
+
+function viewTeam() {
+  const d = state.data, rows = [...(d.pay || [])].sort((a, b) => b.total - a.total);
+  const fund = rows.reduce((a, p) => a + p.total, 0), hrs = rows.reduce((a, p) => a + (p.hours || 0), 0), rev = rows.reduce((a, p) => a + (p.revenue || 0), 0);
+  let h = `<h2>Команда</h2>
+    <div class="stats"><div class="stat"><b style="font-size:15px">${rub(fund)}</b><span>фонд ЗП</span></div>
+    <div class="stat"><b style="font-size:15px">${fmtH(hrs)}</b><span>часов</span></div>
+    <div class="stat"><b style="font-size:15px">${rub(rev)}</b><span>выручка спутников</span></div></div>`;
+  const tp = (d.plans || []).filter(p => p.date === todayStr() && !p.dept);
+  h += `<div class="card" style="overflow-x:auto"><table><tr><th>Сотрудник</th><th>Должность</th><th>Часы</th><th>Итого</th></tr>
+    ${rows.map(p => `<tr><td>${esc(p.name)}</td><td>${esc(p.role)}</td><td>${fmtH(p.hours || 0)}</td><td>${rub(p.total)}</td></tr>`).join('')}</table></div>`;
+  return h;
+}
+
+/* ---------- Старт ---------- */
+(function start() {
+  $('#appbg').innerHTML = SIGN.replace('SIGNCLS', '');
+  try { state.auth = JSON.parse(localStorage.getItem(LS) || 'null'); } catch (e) {}
+  if (state.auth) load(); else showLogin();
+})();
+</script>
+</body>
+</html>
