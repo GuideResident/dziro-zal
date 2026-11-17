@@ -416,10 +416,11 @@ function motCard(x, isAdmin, idx) {
   const tags = (x.soon ? '<span class="tag">скоро</span>' : '') + (x.auto ? '<span class="tag">из РНП</span>' : '') + (isAdmin && x.who ? `<span class="tag">${esc(x.who)}</span>` : '');
   const dates = x.from && x.to ? `${esc(x.from.slice(0, 5))} – ${esc(x.to.slice(0, 5))}` : x.to ? 'до ' + esc(x.to.slice(0, 5)) : '';
   const busy = state.markBusy === idx;
+  const reached = x.goal > 0 && val >= x.goal;
   const btns = x.canMark && !x.soon ? `<div class="mk">
       <button class="mkb minus" ${busy || mk.me <= 0 ? 'disabled' : ''} onclick="markMot(${idx}, -1)">−1</button>
       <div class="mkme"><b>${n(mk.me)}</b><span>мой счёт</span></div>
-      <button class="mkb plus" ${busy ? 'disabled' : ''} onclick="markMot(${idx}, 1)">+1</button></div>
+      <button class="mkb plus" ${busy || reached ? 'disabled' : ''} onclick="markMot(${idx}, 1)">+1</button></div>
       ${state.markErr && state.markErr.i === idx ? `<div class="meta" style="color:var(--terra)">${esc(state.markErr.t)}</div>` : ''}` : '';
   const top = x.canMark && mk.top.length ? `<div class="lead">${mk.top.slice(0, 5).map((t, i) => `<div class="lr ${nk(t.name) === nk(state.data.me) ? 'me' : ''}"><span>${i + 1}. ${esc(t.name)}</span><b>${n(t.n)}</b></div>`).join('')}</div>` : '';
   return `<div class="card mot ${x.type.toLowerCase().indexOf('конкурс') === 0 ? 'contest' : ''}">
@@ -434,6 +435,7 @@ function motCard(x, isAdmin, idx) {
 }
 async function markMot(idx, delta) {
   const d = state.data, x = (d.motivation || [])[idx]; if (!x || state.markBusy != null) return;
+  if (delta > 0 && x.goal > 0 && ((x.canMark && x.contest) ? (x.marks || {}).me || 0 : x.fact) >= x.goal) return;
   state.markBusy = idx; state.markErr = null;
   const mk = x.marks = x.marks || { me: 0, total: 0, top: [] };
   mk.me += delta; mk.total += delta; if (!x.contest) x.fact += delta;
