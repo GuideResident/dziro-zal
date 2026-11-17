@@ -515,7 +515,8 @@ function payCard(p, rules) {
     <div class="big">${rub(p.total)}</div>
     <div class="note">${esc(p.role || '')}${rule ? ' · ' + esc(rule) : ''}</div></div>
     <div class="card rows">
-      ${p.hoursS != null ? `<div class="r"><span>Часы спутником</span><b>${fmtH(p.hoursS)}</b></div><div class="r"><span>Часы хостом</span><b>${fmtH(p.hoursH)}</b></div>` : ''}
+      ${p.hostTotal ? `<div class="r"><span>${p.block === 'МЕНЕДЖЕРЫ' ? 'Начислено менеджером' : p.block === 'СПУТНИКИ' ? 'Начислено спутником' : 'Начислено'}</span><b>${rub(p.total - p.hostTotal)}</b></div><div class="r"><span>Начислено хостом · ${p.hostShifts || 0} смен</span><b>${rub(p.hostTotal)}</b></div>` : ''}
+      ${p.hoursS != null ? `<div class="r"><span>Часы спутником</span><b>${fmtH(p.hoursS)}</b></div><div class="r"><span>Часы хостом</span><b>${fmtH(p.hoursH)}</b></div>` : p.hostHours ? `<div class="r"><span>Часы хостом</span><b>${fmtH(p.hostHours)}</b></div>` : ''}
       <div class="r"><span>Часы всего</span><b>${fmtH(p.hours)}</b></div>
       ${p.revenue ? `<div class="r"><span>Личная выручка</span><b>${rub(p.revenue)}</b></div>` : ''}
       ${p.rate ? `<div class="r"><span>Ставка в час</span><b>${rub(p.rate)}</b></div>` : ''}
