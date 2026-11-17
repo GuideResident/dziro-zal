@@ -193,6 +193,8 @@
   .train{border-color:var(--orange);background:linear-gradient(0deg,rgba(217,119,63,.08),rgba(217,119,63,.08)),var(--card)}
   .appbg .sign{opacity:.16}
   .hrs{color:var(--terra)}
+  .syncbar{font-size:12px;color:var(--muted);text-align:center;margin:-12px 0 10px}
+  .syncbar.off{color:var(--terra)}
 </style>
 </head>
 <body>
@@ -246,9 +248,13 @@ async function showLogin(msg) {
     <input id="lpin" type="password" inputmode="numeric" maxlength="6" placeholder="Тайная печать" autocomplete="current-password">
     <button class="btn" id="lgo">Войти</button>
     <div class="err" id="lerr">${esc(msg || '')}</div></div></div>`;
+  const fillNames = (names, ph) => { const cur = $('#lname') && $('#lname').value; $('#lname').innerHTML = `<option value="">${ph}</option>` + names.map(n => `<option ${n === cur ? 'selected' : ''}>${esc(n)}</option>`).join(''); };
+  const PH = 'Кто ты, Путник?';
+  try { const cn = JSON.parse(localStorage.getItem(LS + '_names') || 'null'); if (cn && cn.length) fillNames(cn, PH); } catch (e) {}
   try {
     const r = await api({ action: 'names' });
-    $('#lname').innerHTML = '<option value="">Кто ты, Путник?</option>' + r.names.map(n => `<option>${esc(n)}</option>`).join('');
+    try { localStorage.setItem(LS + '_names', JSON.stringify(r.names)); } catch (e) {}
+    fillNames(r.names, PH);
   } catch (e) { $('#lerr').textContent = e.message; }
   const go = async () => {
     const name = $('#lname').value, pin = $('#lpin').value.trim();
@@ -259,6 +265,7 @@ async function showLogin(msg) {
       if (!d.ok) { $('#lerr').textContent = d.error; $('#lgo').disabled = false; return; }
       state.auth = { name, pin };
       try { localStorage.setItem(LS, JSON.stringify(state.auth)); } catch (e) {}
+      saveCache(d);
       setData(d);
     } catch (e) { $('#lerr').textContent = 'Нет связи с сервером'; $('#lgo').disabled = false; }
   };
@@ -266,21 +273,37 @@ async function showLogin(msg) {
   $('#lpin').onkeydown = e => { if (e.key === 'Enter') go(); };
 }
 
-function logout() { try { localStorage.removeItem(LS); } catch (e) {} state = { auth: null, data: null, view: 'my', day: null }; showLogin(); }
+function logout() { try { localStorage.removeItem(LS); localStorage.removeItem(LS + '_data'); } catch (e) {} state = { auth: null, data: null, view: 'my', day: null }; showLogin(); }
 
+function saveCache(d) { try { localStorage.setItem(LS + '_data', JSON.stringify({ who: state.auth && state.auth.name, at: Date.now(), d })); } catch (e) {} }
+function readCache() {
+  try { const c = JSON.parse(localStorage.getItem(LS + '_data') || 'null');
+    if (c && c.d && state.auth && c.who === state.auth.name && Date.now() - c.at < 7 * 864e5) return c.d; } catch (e) {}
+  return null;
+}
 async function load(tab) {
-  $('#app').innerHTML = '<div class="spin">Загрузка…</div>';
+  const cached = !tab ? readCache() : null;
+  if (cached && !state.data) { state.syncing = true; setData(cached); }
+  else if (!cached) $('#app').innerHTML = '<div class="spin">Загрузка…</div>';
+  else { state.syncing = true; render(); }
   try {
     const d = await api({ ...state.auth, tab });
-    if (!d.ok) return showLogin(d.error);
-    setData(d);
-  } catch (e) { $('#app').innerHTML = `<div class="empty">Нет связи с сервером<br><br><button class="btn" onclick="load()">Повторить</button></div>`; }
+    state.syncing = false;
+    if (!d.ok) { if (/неверн|попыток/i.test(d.error || '')) { try { localStorage.removeItem(LS + '_data'); } catch (e) {} return showLogin(d.error); } if (cached) { state.offline = true; return render(); } return showLogin(d.error); }
+    state.offline = false;
+    if (!tab || tab === d.tab) { if (!tab) saveCache(d); }
+    setData(d, !!cached);
+  } catch (e) {
+    state.syncing = false;
+    if (cached || state.data) { state.offline = true; render(); return; }
+    $('#app').innerHTML = `<div class="empty">Нет связи с сервером<br><br><button class="btn" onclick="load()">Повторить</button></div>`;
+  }
 }
 
-function setData(d) {
+function setData(d, keepDay) {
   state.data = d;
   const days = [...new Set(d.shifts.map(s => s.date))];
-  state.day = days.includes(todayStr()) ? todayStr() : days[0];
+  if (!(keepDay && days.includes(state.day))) state.day = days.includes(todayStr()) ? todayStr() : days[0];
   if (state.view === 'team' && !d.isAdmin) state.view = 'my';
   render();
 }
@@ -294,7 +317,7 @@ function render() {
   $('#nav').hidden = false; $('#nav').classList.toggle('many', tabs.length > 6);
   const head = `<header>${LOGO}<span class="sp"></span>
     <select onchange="load(this.value)">${d.months.map(m => `<option ${m === d.tab ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
-    <button class="icon-btn" onclick="logout()">Выйти</button></header>`;
+    <button class="icon-btn" onclick="logout()">Выйти</button></header>${state.syncing ? '<div class="syncbar">обновляю…</div>' : state.offline ? '<div class="syncbar off">нет связи — показаны сохранённые данные</div>' : ''}`;
   const body = { my: viewMy, all: viewAll, plans: viewPlans, motiv: viewMotiv, pay: viewPay, resp: viewResp, team: viewTeam }[state.view]();
   $('#app').innerHTML = head + body;
   const sel = document.querySelector('.chip.sel'); if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
