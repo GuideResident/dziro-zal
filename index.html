@@ -195,6 +195,18 @@
   .hrs{color:var(--terra)}
   .syncbar{font-size:12px;color:var(--muted);text-align:center;margin:-12px 0 10px}
   .syncbar.off{color:var(--terra)}
+  .mk{display:flex;align-items:center;gap:10px;margin-top:12px}
+  .mkb{flex:1;padding:12px 0;border-radius:14px;border:0;font-size:18px;font-weight:500;cursor:pointer}
+  .mkb.plus{background:var(--terra);color:#fff}
+  .mkb.minus{background:var(--card2);color:var(--text);flex:0 0 64px}
+  .mkb:disabled{opacity:.45}
+  .mkme{flex:0 0 76px;text-align:center}
+  .mkme b{display:block;font-size:22px;font-weight:500;color:var(--terra)}
+  .mkme span{font-size:11px;color:var(--muted)}
+  .lead{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
+  .lr{display:flex;justify-content:space-between;font-size:14px;padding:4px 0}
+  .lr.me{color:var(--terra);font-weight:500}
+  .lr b{font-weight:500}
 </style>
 </head>
 <body>
@@ -354,7 +366,9 @@ function shiftCard(s, cls = '') {
 
 const nk = n => String(n || '').toLowerCase().replace(/ё/g, 'е').split(/\s+/).filter(Boolean).sort().join(' ');
 function monBlock(m) {
-  if (!m || !m.list || !m.list.length) return '';
+  if (!m || !m.list) return '';
+  m = { ...m, list: m.list.filter(x => !['Гостей', 'Чеков', 'Глубина чека'].includes(x.name)) };
+  if (!m.list.length) return '';
   const f = (x, money) => money ? rub(x) : Math.round(x).toLocaleString('ru-RU');
   const row = x => {
     const pct = x.plan > 0 ? x.fact / x.plan * 100 : 0, left = Math.max(x.plan - x.fact, 0);
@@ -392,20 +406,47 @@ function viewPlans() {
   return h;
 }
 
-function motCard(x, isAdmin) {
+function motCard(x, isAdmin, idx) {
   const n = v => Math.round(v).toLocaleString('ru-RU');
   const fmt = v => x.unit === '₽' ? rub(v) : n(v) + (x.unit ? ' ' + esc(x.unit) : '');
-  const pct = x.goal > 0 ? x.fact / x.goal * 100 : 0, left = Math.max(x.goal - x.fact, 0);
+  const mk = x.marks || { me: 0, total: 0, top: [] };
+  const personal = x.canMark && x.contest;
+  const val = personal ? mk.me : x.fact;
+  const pct = x.goal > 0 ? val / x.goal * 100 : 0, left = Math.max(x.goal - val, 0);
   const tags = (x.soon ? '<span class="tag">скоро</span>' : '') + (x.auto ? '<span class="tag">из РНП</span>' : '') + (isAdmin && x.who ? `<span class="tag">${esc(x.who)}</span>` : '');
   const dates = x.from && x.to ? `${esc(x.from.slice(0, 5))} – ${esc(x.to.slice(0, 5))}` : x.to ? 'до ' + esc(x.to.slice(0, 5)) : '';
+  const busy = state.markBusy === idx;
+  const btns = x.canMark && !x.soon ? `<div class="mk">
+      <button class="mkb minus" ${busy || mk.me <= 0 ? 'disabled' : ''} onclick="markMot(${idx}, -1)">−1</button>
+      <div class="mkme"><b>${n(mk.me)}</b><span>мой счёт</span></div>
+      <button class="mkb plus" ${busy ? 'disabled' : ''} onclick="markMot(${idx}, 1)">+1</button></div>
+      ${state.markErr && state.markErr.i === idx ? `<div class="meta" style="color:var(--terra)">${esc(state.markErr.t)}</div>` : ''}` : '';
+  const top = x.canMark && mk.top.length ? `<div class="lead">${mk.top.slice(0, 5).map((t, i) => `<div class="lr ${nk(t.name) === nk(state.data.me) ? 'me' : ''}"><span>${i + 1}. ${esc(t.name)}</span><b>${n(t.n)}</b></div>`).join('')}</div>` : '';
   return `<div class="card mot ${x.type.toLowerCase().indexOf('конкурс') === 0 ? 'contest' : ''}">
     <div class="mt"><b>${esc(x.title)}</b><div style="flex:none">${tags}</div></div>
     ${x.cond ? `<div class="cond">${esc(x.cond)}</div>` : ''}
     ${x.reward ? `<div class="rw"><span>Награда</span>${esc(x.reward)}</div>` : ''}
-    ${x.goal > 0 ? `<div class="pr"><div class="pl"><span>Прогресс</span><b>${fmt(x.fact)} / ${fmt(x.goal)}</b></div>
+    ${x.goal > 0 ? `<div class="pr"><div class="pl"><span>${personal ? 'Мой прогресс' : 'Прогресс'}</span><b>${fmt(val)} / ${fmt(x.goal)}</b></div>
       <div class="pb"><i class="${pct >= 100 ? 'done' : ''}" style="width:${Math.min(100, pct)}%"></i></div>
       <div class="meta" style="margin-top:0">${left > 0 ? 'осталось ' + fmt(left) : 'выполнено!'} · ${Math.round(pct)}%</div></div>` : ''}
+    ${btns}${top}
     ${dates || x.note ? `<div class="meta">${dates}${dates && x.note ? ' · ' : ''}${esc(x.note)}</div>` : ''}</div>`;
+}
+async function markMot(idx, delta) {
+  const d = state.data, x = (d.motivation || [])[idx]; if (!x || state.markBusy != null) return;
+  state.markBusy = idx; state.markErr = null;
+  const mk = x.marks = x.marks || { me: 0, total: 0, top: [] };
+  mk.me += delta; mk.total += delta; if (!x.contest) x.fact += delta;
+  const mine = mk.top.find(t => nk(t.name) === nk(d.me));
+  if (mine) mine.n += delta; else if (delta > 0) mk.top.push({ name: d.me, n: delta });
+  mk.top = mk.top.filter(t => t.n > 0).sort((a, b) => b.n - a.n);
+  render();
+  try {
+    const r = await api({ ...state.auth, action: 'mark', title: x.title, delta });
+    if (r.ok && r.item) d.motivation[idx] = r.item;
+    else { state.markErr = { i: idx, t: r.error || 'Не получилось' }; mk.me -= delta; mk.total -= delta; if (!x.contest) x.fact -= delta; const m2 = mk.top.find(t => nk(t.name) === nk(d.me)); if (m2) m2.n -= delta; mk.top = mk.top.filter(t => t.n > 0); }
+  } catch (e) { state.markErr = { i: idx, t: 'Нет связи — отметка не сохранилась' }; mk.me -= delta; mk.total -= delta; if (!x.contest) x.fact -= delta; const m3 = mk.top.find(t => nk(t.name) === nk(d.me)); if (m3) m3.n -= delta; mk.top = mk.top.filter(t => t.n > 0); }
+  state.markBusy = null; saveCache(d); render();
 }
 function viewMotiv() {
   const d = state.data, list = d.motivation || [];
@@ -413,8 +454,8 @@ function viewMotiv() {
   const bon = list.filter(x => !isC(x)), con = list.filter(isC);
   let h = '<h2>Мотивация</h2>';
   if (!list.length) return h + '<div class="empty">Сейчас нет активных бонусов и конкурсов</div>';
-  if (bon.length) h += '<div class="sec">Бонусы за план</div>' + bon.map(x => motCard(x, d.isAdmin)).join('');
-  if (con.length) h += '<div class="sec">Конкурсы и акции</div>' + con.map(x => motCard(x, d.isAdmin)).join('');
+  if (bon.length) h += '<div class="sec">Бонусы за план</div>' + bon.map(x => motCard(x, d.isAdmin, list.indexOf(x))).join('');
+  if (con.length) h += '<div class="sec">Конкурсы и акции</div>' + con.map(x => motCard(x, d.isAdmin, list.indexOf(x))).join('');
   return h;
 }
 
