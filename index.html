@@ -207,6 +207,16 @@
   .lr{display:flex;justify-content:space-between;font-size:14px;padding:4px 0}
   .lr.me{color:var(--terra);font-weight:500}
   .lr b{font-weight:500}
+  .bell{position:relative;background:none;border:0;color:var(--cream);padding:6px 4px;cursor:pointer;display:flex}
+  .bell svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .bell b{position:absolute;top:0;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:#d9773f;color:#fff;font-size:11px;font-weight:600;line-height:17px;text-align:center}
+  .note{display:flex;align-items:flex-start;gap:12px;cursor:pointer;position:relative}
+  .note .nic{flex:none;width:36px;height:36px;border-radius:12px;background:var(--card2);display:flex;align-items:center;justify-content:center;color:var(--terra)}
+  .note .nic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .note .ntx{flex:1;min-width:0;font-size:15px;line-height:1.35;padding-top:2px}
+  .note.new{border-color:var(--terra)}
+  .note.bad .nic{color:#8c4f30}
+  .note .ndot{position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:50%;background:#d9773f}
 </style>
 </head>
 <body>
@@ -314,10 +324,69 @@ async function load(tab) {
 
 function setData(d, keepDay) {
   state.data = d;
+  if (!state.homeTab) state.homeTab = d.tab;
   const days = [...new Set(d.shifts.map(s => s.date))];
   if (!(keepDay && days.includes(state.day))) state.day = days.includes(todayStr()) ? todayStr() : days[0];
   if (state.view === 'team' && !d.isAdmin) state.view = 'my';
   render();
+}
+
+/* ---------- Уведомления (колокольчик) ---------- */
+const BELL = '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>';
+function seenStore() { try { return JSON.parse(localStorage.getItem(LS + '_seen_' + ((state.data && state.data.me) || '')) || 'null'); } catch (e) { return null; } }
+function seenSave(s) { try { localStorage.setItem(LS + '_seen_' + ((state.data && state.data.me) || ''), JSON.stringify(s)); } catch (e) {} }
+const ddmm = s => String(s || '').slice(0, 5);
+function computeNotes(d) {
+  const out = [], me = d.me, td = todayStr();
+  const tmD = new Date(toDate(td).getTime() + 864e5);
+  const tm = [tmD.getDate(), tmD.getMonth() + 1].map(x => String(x).padStart(2, '0')).join('.') + '.' + tmD.getFullYear();
+  const mine = (d.shifts || []).filter(s => s.name === me && !isOff(s));
+  const sh = (s, w) => `${w}: ${esc(s.pos)}${s.from ? ', ' + esc(s.from) + '–' + esc(s.to) : ''}`;
+  mine.filter(s => s.date === td).forEach(s => out.push({ key: 'shift:' + td, ic: 'my', go: 'my', t: sh(s, 'Сегодня смена'), pr: 1 }));
+  mine.filter(s => s.date === tm).forEach(s => out.push({ key: 'shift:' + tm, ic: 'my', go: 'my', t: sh(s, 'Завтра смена'), pr: 2 }));
+  const plans = (d.plans || []).filter(p => p.date === td);
+  const myPlan = plans.find(p => !p.dept && nk(p.who) === nk(me)), dept = plans.find(p => p.dept);
+  const pl = myPlan || dept;
+  if (pl) {
+    const parts = [[pl.rev, '— выручка'], [pl.hookahs, 'кальянов'], [pl.mods, 'модиф.'], [pl.teaN, 'чая']].filter(x => x[0]).map(x => x[0] + ' ' + x[1]);
+    out.push({ key: 'plan:' + td + (myPlan ? '' : ':dept'), ic: 'plans', go: 'plans', pr: 0,
+      t: `${myPlan ? 'Твой план на сегодня' : 'План отдела на сегодня'}${parts.length ? ': ' + parts.join(', ') : ''}${pl.positions ? '. Обязательно: ' + esc(pl.positions) : ''}` });
+  }
+  (d.motivation || []).forEach(x => {
+    const c = String(x.type || '').toLowerCase().indexOf('конкурс') === 0;
+    out.push({ key: 'mot:' + (x.id || x.title), ic: 'motiv', go: 'motiv', pr: 3, base: 1,
+      t: `${c ? 'Новый конкурс' : 'Новая мотивация'}: ${esc(x.title)}${x.reward ? ' — ' + esc(x.reward) : ''}` });
+  });
+  (d.trainings || []).filter(t => toDate(t.date) >= toDate(td)).forEach(t => {
+    out.push({ key: 'ev:' + t.date + ':' + t.topic, ic: 'my', go: 'my', pr: 3, base: 1,
+      t: `Мероприятие ${ddmm(t.date)}${t.from ? ' в ' + esc(t.from) : ''}: ${esc(t.topic)}` });
+  });
+  const r = d.resp;
+  if (r && r.ok && d.tab === state.homeTab) (r.entries || []).forEach(e => {
+    out.push({ key: 'pass:' + [e.t, e.d, e.s, e.n].join('|'), ic: 'resp', go: 'resp', pr: 4, base: 1, bad: e.t !== 'G',
+      t: `${e.t === 'G' ? 'Good Pass' : 'Bad Pass'} ${ddmm(e.d)}: ${esc(e.s)}${Number(e.r) > 0 ? ' (' + rub(Number(e.r)) + ')' : ''}` });
+  });
+  let s = seenStore();
+  if (!s) { s = { k: {} }; out.filter(n => n.base).forEach(n => { s.k[n.key] = Date.now(); }); seenSave(s); }
+  out.forEach(n => { n.unread = !s.k[n.key]; });
+  return out.sort((a, b) => (b.unread - a.unread) || (a.pr - b.pr));
+}
+function unreadCount() { return state.data ? computeNotes(state.data).filter(n => n.unread).length : 0; }
+function markAllSeen() {
+  const s = seenStore() || { k: {} }, now = Date.now();
+  computeNotes(state.data).forEach(n => { if (!s.k[n.key]) s.k[n.key] = now; });
+  const keys = Object.keys(s.k); if (keys.length > 400) keys.sort((a, b) => s.k[a] - s.k[b]).slice(0, keys.length - 400).forEach(k => delete s.k[k]);
+  seenSave(s);
+  const bb = document.querySelector('.bell b'); if (bb) bb.remove();
+  try { if (navigator.clearAppBadge) navigator.clearAppBadge(); } catch (e) {}
+}
+function viewNotes() {
+  const list = computeNotes(state.data);
+  const card = n => `<div class="card note ${n.unread ? 'new' : ''} ${n.bad ? 'bad' : ''}" onclick="go('${n.go}')"><span class="nic">${ICON[n.ic] || ''}</span><div class="ntx">${n.t}</div>${n.unread ? '<i class="ndot"></i>' : ''}</div>`;
+  const un = list.filter(n => n.unread), rest = list.filter(n => !n.unread);
+  setTimeout(markAllSeen, 0);
+  return `<h2>Уведомления</h2>` + (list.length ? (un.length ? '<div class="sec">Новое</div>' + un.map(card).join('') : '') +
+    (rest.length ? '<div class="sec">Ранее</div>' + rest.map(card).join('') : '') : '<div class="empty">Пока ничего нового</div>');
 }
 
 /* ---------- Отрисовка ---------- */
@@ -327,10 +396,13 @@ function render() {
   if (d.isAdmin) tabs.push(['team', ICON.team, 'Команда']);
   $('#navIn').innerHTML = tabs.map(([k, i, t]) => `<button class="${state.view === k ? 'on' : ''}" onclick="go('${k}')">${i}${t}</button>`).join('');
   $('#nav').hidden = false; $('#nav').classList.toggle('many', tabs.length > 6);
+  const cnt = unreadCount();
+  try { if (navigator.setAppBadge) cnt ? navigator.setAppBadge(cnt) : navigator.clearAppBadge(); } catch (e) {}
   const head = `<header>${LOGO}<span class="sp"></span>
+    <button class="bell" onclick="go('notes')" aria-label="Уведомления">${BELL}${cnt ? `<b>${cnt}</b>` : ''}</button>
     <select onchange="load(this.value)">${d.months.map(m => `<option ${m === d.tab ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
     <button class="icon-btn" onclick="logout()">Выйти</button></header>${state.syncing ? '<div class="syncbar">обновляю…</div>' : state.offline ? '<div class="syncbar off">нет связи — показаны сохранённые данные</div>' : ''}`;
-  const body = { my: viewMy, all: viewAll, plans: viewPlans, motiv: viewMotiv, pay: viewPay, resp: viewResp, team: viewTeam }[state.view]();
+  const body = { notes: viewNotes, my: viewMy, all: viewAll, plans: viewPlans, motiv: viewMotiv, pay: viewPay, resp: viewResp, team: viewTeam }[state.view]();
   $('#app').innerHTML = head + body;
   const sel = document.querySelector('.chip.sel'); if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
 }
