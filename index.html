@@ -217,6 +217,11 @@
   .note.new{border-color:var(--terra)}
   .note.bad .nic{color:#8c4f30}
   .note .ndot{position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:50%;background:#d9773f}
+  .pushc b{display:block;font-weight:500;margin-bottom:4px}
+  .pushc.on{border-color:var(--olive)}
+  .pbtn{margin-top:12px;width:100%;padding:12px;border-radius:14px;border:0;background:var(--terra);color:#fff;font:inherit;font-weight:500;cursor:pointer}
+  .pbtn.ghost{background:var(--card2);color:var(--text)}
+  .ptoast{position:fixed;z-index:30;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 10px);max-width:536px;margin:0 auto;background:#3a3935;color:#fff;padding:12px 16px;border-radius:16px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 </style>
 </head>
 <body>
@@ -253,6 +258,7 @@ const ORDER = ['Менеджер', 'Хост', 'Фулл', 'Утро', 'Вече
 const posRank = p => { const i = ORDER.findIndex(x => String(p).startsWith(x)); return i < 0 ? 50 : i; };
 
 let state = { auth: null, data: null, view: 'my', day: null };
+try { const g = new URLSearchParams(location.search).get('go'); if (g) { state.view = g; history.replaceState(null, '', location.pathname); } } catch (e) {}
 
 async function api(body) {
   if (!API_URL) throw new Error('Не указан API_URL в index.html');
@@ -324,11 +330,75 @@ async function load(tab) {
 
 function setData(d, keepDay) {
   state.data = d;
+  if (!state.pushChecked) { state.pushChecked = 1; setTimeout(refreshPush, 3000); }
   if (!state.homeTab) state.homeTab = d.tab;
   const days = [...new Set(d.shifts.map(s => s.date))];
   if (!(keepDay && days.includes(state.day))) state.day = days.includes(todayStr()) ? todayStr() : days[0];
   if (state.view === 'team' && !d.isAdmin) state.view = 'my';
   render();
+}
+
+/* ---------- Push-уведомления ---------- */
+const FB_CFG = { apiKey: 'AIzaSyD1OD0UcTbOaIZ8KiL3Kniyzojd0BkRLJE', authDomain: 'dziro-push.firebaseapp.com', projectId: 'dziro-push',
+  storageBucket: 'dziro-push.firebasestorage.app', messagingSenderId: '1063927156549', appId: '1:1063927156549:web:39676c3b179588f366f82c' };
+const FB_VAPID = 'BA6ZUJkiae2n0K71KDFLqY04eBUxAi9R-mfSMOc_lZWElZcMrN3DJGeqpQkynxcgIbz25BGgUSSgYt0Yeztk2y0';
+const FB_V = '10.12.2';
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const pushSupported = () => 'serviceWorker' in navigator && 'Notification' in window && 'PushManager' in window;
+function loadScript(src) { return new Promise((ok, bad) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = bad; document.head.appendChild(s); }); }
+async function fbMessaging() {
+  await loadScript(`https://www.gstatic.com/firebasejs/${FB_V}/firebase-app-compat.js`);
+  await loadScript(`https://www.gstatic.com/firebasejs/${FB_V}/firebase-messaging-compat.js`);
+  if (!firebase.apps.length) firebase.initializeApp(FB_CFG);
+  const m = firebase.messaging();
+  if (!fbMessaging.hooked) { fbMessaging.hooked = 1; m.onMessage(p => { const n = p.notification || {}; pushToast((n.title ? n.title + ': ' : '') + (n.body || '')); if (state.auth) load(); }); }
+  return m;
+}
+function pushToast(t) {
+  let el = document.getElementById('ptoast');
+  if (!el) { el = document.createElement('div'); el.id = 'ptoast'; el.className = 'ptoast'; document.body.appendChild(el); el.onclick = () => el.remove(); }
+  el.textContent = t; clearTimeout(pushToast.t); pushToast.t = setTimeout(() => el.remove(), 6000);
+}
+const pushOn = () => { try { return !!localStorage.getItem(LS + '_push') && Notification.permission === 'granted'; } catch (e) { return false; } };
+function pushCard() {
+  if (state.pushBusy) return '<div class="card pushc"><b>Уведомления на телефон</b><div class="note">Подключаю…</div></div>';
+  if (pushOn()) return `<div class="card pushc on"><b>Уведомления на телефон включены</b><div class="note">План перед сменой в 12:00, напоминание о смене накануне в 20:00, новые мотивации, мероприятия и пассы.</div>
+    <button class="pbtn ghost" onclick="disablePush()">Выключить на этом устройстве</button></div>`;
+  if (isIOS && !isStandalone()) return `<div class="card pushc"><b>Уведомления на iPhone</b><div class="note">Сначала добавь приложение на экран «Домой»: в Safari нажми «Поделиться» → «На экран „Домой“», открой DZIRO с иконки и зайди сюда снова.</div></div>`;
+  if (!pushSupported()) return `<div class="card pushc"><b>Уведомления на телефон</b><div class="note">Этот браузер не поддерживает уведомления. Открой приложение в Chrome или Safari.</div></div>`;
+  if (Notification.permission === 'denied') return `<div class="card pushc"><b>Уведомления запрещены</b><div class="note">Разреши уведомления для этого сайта в настройках телефона или браузера, затем обнови страницу.</div></div>`;
+  return `<div class="card pushc"><b>Уведомления на телефон</b><div class="note">Планы, смены, новые мотивации и пассы будут приходить, даже когда приложение закрыто.</div>
+    <button class="pbtn" onclick="enablePush()">Включить уведомления</button>${state.pushErr ? `<div class="note" style="color:#8c4f30;margin-top:8px">${esc(state.pushErr)}</div>` : ''}</div>`;
+}
+async function enablePush() {
+  state.pushErr = ''; state.pushBusy = true; render();
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') throw new Error('Уведомления не разрешены');
+    const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+    await navigator.serviceWorker.ready;
+    const m = await fbMessaging();
+    const token = await m.getToken({ vapidKey: FB_VAPID, serviceWorkerRegistration: reg });
+    if (!token) throw new Error('Не удалось получить токен');
+    const r = await api({ ...state.auth, action: 'pushReg', token, device: navigator.userAgent, test: true });
+    if (!r.ok) throw new Error(r.error || 'Сервер не принял подписку');
+    try { localStorage.setItem(LS + '_push', token); } catch (e) {}
+    pushToast('Готово! Должно прийти проверочное уведомление');
+  } catch (e) { state.pushErr = e.message || String(e); }
+  state.pushBusy = false; render();
+}
+async function disablePush() {
+  let token = ''; try { token = localStorage.getItem(LS + '_push') || ''; localStorage.removeItem(LS + '_push'); } catch (e) {}
+  try { if (token) await api({ ...state.auth, action: 'pushReg', token, off: true }); const m = await fbMessaging(); await m.deleteToken(); } catch (e) {}
+  render();
+}
+async function refreshPush() {
+  if (!pushOn() || !state.auth) return;
+  try { const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js'); const m = await fbMessaging();
+    const token = await m.getToken({ vapidKey: FB_VAPID, serviceWorkerRegistration: reg });
+    if (token && token !== localStorage.getItem(LS + '_push')) { await api({ ...state.auth, action: 'pushReg', token, device: navigator.userAgent }); localStorage.setItem(LS + '_push', token); }
+  } catch (e) {}
 }
 
 /* ---------- Уведомления (колокольчик) ---------- */
@@ -385,7 +455,7 @@ function viewNotes() {
   const card = n => `<div class="card note ${n.unread ? 'new' : ''} ${n.bad ? 'bad' : ''}" onclick="go('${n.go}')"><span class="nic">${ICON[n.ic] || ''}</span><div class="ntx">${n.t}</div>${n.unread ? '<i class="ndot"></i>' : ''}</div>`;
   const un = list.filter(n => n.unread), rest = list.filter(n => !n.unread);
   setTimeout(markAllSeen, 0);
-  return `<h2>Уведомления</h2>` + (list.length ? (un.length ? '<div class="sec">Новое</div>' + un.map(card).join('') : '') +
+  return `<h2>Уведомления</h2>` + pushCard() + (list.length ? (un.length ? '<div class="sec">Новое</div>' + un.map(card).join('') : '') +
     (rest.length ? '<div class="sec">Ранее</div>' + rest.map(card).join('') : '') : '<div class="empty">Пока ничего нового</div>');
 }
 
