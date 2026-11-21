@@ -222,6 +222,20 @@
   .pbtn{margin-top:12px;width:100%;padding:12px;border-radius:14px;border:0;background:var(--terra);color:#fff;font:inherit;font-weight:500;cursor:pointer}
   .pbtn.ghost{background:var(--card2);color:var(--text)}
   .ptoast{position:fixed;z-index:30;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 10px);max-width:536px;margin:0 auto;background:#3a3935;color:#fff;padding:12px 16px;border-radius:16px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+  .backb{background:none;border:0;color:var(--terra);font:inherit;font-size:15px;padding:0;margin:0 0 6px;cursor:pointer}
+  .admbtns{display:flex;gap:8px;margin-bottom:6px}.admbtns .pbtn{margin-top:0}
+  .admrow{display:flex;align-items:center;gap:10px;cursor:pointer}
+  .admrow .info{flex:1;min-width:0}.admrow b{display:block;font-weight:500}.admrow span{font-size:13px;color:var(--muted)}
+  .admrow .ed{flex:none;color:var(--terra);font-size:13px}
+  .aform label{display:block;font-size:13px;color:var(--muted);margin-bottom:10px}
+  .aform input,.aform select,.aform textarea{display:block;width:100%;margin-top:4px;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;font:inherit;font-size:16px;color:var(--text)}
+  .aform .two{display:flex;gap:8px}.aform .two label{flex:1;min-width:0}
+  .aform .hint{font-size:12px;color:var(--muted)}
+  .who{margin:-4px 0 12px;border:1px solid var(--line);border-radius:12px;padding:6px 12px;max-height:240px;overflow:auto;background:#fff}
+  .who .wchk{display:flex;align-items:center;gap:10px;margin:0;padding:7px 0;font-size:15px;color:var(--text)}
+  .who .wchk input{width:20px;height:20px;margin:0;flex:none}
+  .err2{color:#8c4f30;font-size:14px;min-height:18px;margin:4px 0}
+  .pbtn.danger{background:#f3e3da;color:#8c4f30}
 </style>
 </head>
 <body>
@@ -336,6 +350,116 @@ function setData(d, keepDay) {
   if (!(keepDay && days.includes(state.day))) state.day = days.includes(todayStr()) ? todayStr() : days[0];
   if (state.view === 'team' && !d.isAdmin) state.view = 'my';
   render();
+}
+
+/* ---------- Управление мотивациями и мероприятиями (админ) ---------- */
+const MOT_TYPES = ['Бонус', 'Конкурс', 'Акция'];
+const UNITS = ['шт', '₽', '%', 'чеков', 'кальянов', 'отзывов'];
+const iso2ru = s => s ? s.split('-').reverse().join('.') : '';
+const ru2iso = s => { const m = String(s || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; };
+async function adminLoad(force) {
+  if (state.adm && !force) return;
+  state.adm = state.adm || { loading: true };
+  try { const r = await api({ ...state.auth, action: 'adminList' }); state.adm = r.ok ? r : { err: r.error || 'Ошибка' }; }
+  catch (e) { state.adm = { err: 'Нет связи с сервером' }; }
+  if (['admin', 'motForm', 'evForm'].includes(state.view)) render();
+}
+function viewAdmin() {
+  const a = state.adm;
+  let h = `<button class="backb" onclick="go('motiv')">‹ Мотивация</button><h2>Управление</h2>
+    <div class="admbtns"><button class="pbtn" onclick="openMotForm()">+ Мотивация</button><button class="pbtn" onclick="openEvForm()">+ Мероприятие</button></div>`;
+  if (!a || a.loading) { adminLoad(); return h + '<div class="spin">Загружаю…</div>'; }
+  if (a.err) return h + `<div class="empty">${esc(a.err)}<br><br><button class="btn" style="width:auto" onclick="state.adm=null;render()">Повторить</button></div>`;
+  const mot = a.motiv || [], ev = a.events || [];
+  h += '<div class="sec">Мотивации и конкурсы</div>' + (mot.length ? mot.map(x => { const v = x.v;
+    return `<div class="card admrow" onclick="openMotForm(${x.row})"><div class="info"><b>${esc(v[1])}</b><span>${esc(v[0])} · ${esc(v[6] || 'Все')} · ${esc(String(v[4]).slice(0, 5))}–${esc(String(v[5]).slice(0, 5))}</span></div><span class="ed">Изменить</span></div>`; }).join('') : '<div class="empty">Пока пусто</div>');
+  h += '<div class="sec">Мероприятия</div>' + (ev.length ? ev.map(x => { const v = x.v;
+    return `<div class="card admrow" onclick="openEvForm(${x.row})"><div class="info"><b>${esc(v[3])}</b><span>${esc(v[0])}${v[1] ? ' · ' + esc(v[1]) : ''} · ${esc(v[5] || 'Все')}</span></div><span class="ed">Изменить</span></div>`; }).join('') : '<div class="empty">Пока пусто</div>');
+  return h;
+}
+function whoPicker(sel, single) {
+  const names = (state.adm && state.adm.names) || [];
+  const all = !sel.length || sel.includes('Все');
+  return `<div class="who"><label class="wchk"><input type="checkbox" id="wAll" ${all ? 'checked' : ''} onchange="document.getElementById('wList').hidden=this.checked"> Все</label>
+    <div id="wList" ${all ? 'hidden' : ''}>${names.map(n => `<label class="wchk"><input type="${single ? 'radio' : 'checkbox'}" name="wn" value="${esc(n)}" ${sel.includes(n) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}</div></div>`;
+}
+function pickedWho() { if (document.getElementById('wAll').checked) return ['Все']; const v = [...document.querySelectorAll('input[name=wn]:checked')].map(i => i.value); return v.length ? v : ['Все']; }
+function openMotForm(row) { state.formRow = row || 0; state.formErr = ''; go('motForm'); }
+function openEvForm(row) { state.formRow = row || 0; state.formErr = ''; go('evForm'); }
+function viewMotForm() {
+  const a = state.adm; if (!a || a.loading) { adminLoad(); return '<div class="spin">Загружаю…</div>'; }
+  const x = state.formRow ? ((a.motiv || []).find(r => r.row === state.formRow) || {}).v : null;
+  const v = x || ['Бонус', '', '', '', todayStr(), '', 'Все', '', '', '', 'шт', ''];
+  const metrics = [...new Set((a.motiv || []).map(r => r.v[7]).filter(Boolean))];
+  const f = (id, lab, val, extra = '') => `<label>${lab}<input id="${id}" value="${esc(val)}" ${extra}></label>`;
+  return `<button class="backb" onclick="go('admin')">‹ Управление</button><h2>${x ? 'Изменить мотивацию' : 'Новая мотивация'}</h2>
+  <div class="card aform">
+    <label>Тип<select id="mType">${MOT_TYPES.map(t => `<option ${t === v[0] ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+    ${f('mTitle', 'Название *', v[1], 'placeholder="Например: Король Грейпфрутов"')}
+    <label>Условие<textarea id="mCond" rows="2" placeholder="Что нужно сделать">${esc(v[2])}</textarea></label>
+    ${f('mReward', 'Награда', v[3], 'placeholder="Например: 1000 ₽ или напиток с бара"')}
+    <div class="two"><label>С<input type="date" id="mFrom" value="${ru2iso(v[4])}"></label><label>По<input type="date" id="mTo" value="${ru2iso(v[5])}"></label></div>
+    <label>Для кого${x ? ' <span class="hint">(одна строка — один человек или «Все»)</span>' : ' <span class="hint">(если выбрать несколько — создастся по строке на каждого)</span>'}</label>${whoPicker(v[6] ? [v[6]] : [], !!x)}
+    <label>Как считать<select id="mMetric" onchange="document.getElementById('mGoalW').hidden=!!this.value"><option value="">Вручную: мастера жмут +1</option>${metrics.map(m => `<option ${m === v[7] ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
+    <div class="two" id="mGoalW" ${v[7] ? 'hidden' : ''}><label>Цель<input id="mGoal" inputmode="numeric" value="${esc(v[8])}" placeholder="Например: 15"></label>
+      <label>Ед.<input id="mUnit" list="units" value="${esc(v[10])}"><datalist id="units">${UNITS.map(u => `<option value="${u}">`).join('')}</datalist></label></div>
+    ${f('mNote', 'Комментарий', v[11])}
+    ${x ? '<div class="hint" style="margin:2px 0 10px">Если поменять название, дату начала или награду, счётчики +1 по этой мотивации начнутся заново.</div>' : ''}
+    <div class="err2">${esc(state.formErr || '')}</div>
+    <button class="pbtn" id="fSave" onclick="saveMot()">${x ? 'Сохранить' : 'Создать'}</button>
+    ${x ? `<button class="pbtn danger" onclick="delAdm('motiv')">Удалить</button>` : ''}
+  </div>`;
+}
+function viewEvForm() {
+  const a = state.adm; if (!a || a.loading) { adminLoad(); return '<div class="spin">Загружаю…</div>'; }
+  const x = state.formRow ? ((a.events || []).find(r => r.row === state.formRow) || {}).v : null;
+  const v = x || ['', '', '', '', '', 'Все', '', '', ''];
+  const who = String(v[5] || 'Все').split(',').map(s => s.trim()).filter(Boolean);
+  const f = (id, lab, val, extra = '') => `<label>${lab}<input id="${id}" value="${esc(val)}" ${extra}></label>`;
+  return `<button class="backb" onclick="go('admin')">‹ Управление</button><h2>${x ? 'Изменить мероприятие' : 'Новое мероприятие'}</h2>
+  <div class="card aform">
+    ${f('eTitle', 'Название *', v[3], 'placeholder="Например: Тренинг по чаю"')}
+    <label>Дата *<input type="date" id="eDate" value="${ru2iso(v[0])}"></label>
+    <div class="two"><label>С<input type="time" id="eFrom" value="${esc(String(v[1]).padStart(5, '0'))}"></label><label>До<input type="time" id="eTo" value="${esc(v[2] ? String(v[2]).padStart(5, '0') : '')}"></label></div>
+    ${f('eLead', 'Ведущий', v[4])}
+    <label>Участники</label>${whoPicker(who, false)}
+    ${f('ePlace', 'Место', v[6])}
+    ${f('eLink', 'Материалы (ссылка)', v[7], 'inputmode="url" placeholder="https://…"')}
+    ${f('eNote', 'Комментарий', v[8])}
+    <div class="err2">${esc(state.formErr || '')}</div>
+    <button class="pbtn" id="fSave" onclick="saveEv()">${x ? 'Сохранить' : 'Создать'}</button>
+    ${x ? `<button class="pbtn danger" onclick="delAdm('event')">Удалить</button>` : ''}
+  </div>`;
+}
+async function admSend(body, okMsg) {
+  const b = document.getElementById('fSave'); if (b) b.disabled = true;
+  try {
+    const r = await api({ ...state.auth, action: 'adminSave', ...body });
+    if (!r.ok) { state.formErr = r.error || 'Не получилось'; render(); return; }
+    state.adm = r; state.formErr = ''; pushToast(okMsg); go('admin'); load();
+  } catch (e) { state.formErr = 'Нет связи — не сохранено'; render(); }
+}
+function saveMot() {
+  const g = id => (document.getElementById(id) || {}).value || '';
+  const row = state.formRow, old = row ? ((state.adm.motiv || []).find(r => r.row === row) || {}).v : null;
+  if (!g('mTitle').trim()) { state.formErr = 'Укажи название'; return render(); }
+  const metric = g('mMetric');
+  admSend({ kind: 'motiv', row, check: old ? old[1] : '', item: { type: g('mType'), title: g('mTitle').trim(), cond: g('mCond').trim(), reward: g('mReward').trim(),
+    from: iso2ru(g('mFrom')), to: iso2ru(g('mTo')), who: pickedWho(), metric, goal: metric ? '' : g('mGoal').trim(), unit: g('mUnit').trim(), note: g('mNote').trim() } },
+    row ? 'Мотивация сохранена' : 'Мотивация создана');
+}
+function saveEv() {
+  const g = id => (document.getElementById(id) || {}).value || '';
+  const row = state.formRow, old = row ? ((state.adm.events || []).find(r => r.row === row) || {}).v : null;
+  if (!g('eTitle').trim() || !g('eDate')) { state.formErr = 'Укажи название и дату'; return render(); }
+  admSend({ kind: 'event', row, check: old ? old[3] : '', item: { date: iso2ru(g('eDate')), from: g('eFrom'), to: g('eTo'), title: g('eTitle').trim(), lead: g('eLead').trim(),
+    who: pickedWho().join(', '), place: g('ePlace').trim(), link: g('eLink').trim(), note: g('eNote').trim() } },
+    row ? 'Мероприятие сохранено' : 'Мероприятие создано');
+}
+function delAdm(kind) {
+  const row = state.formRow, list = kind === 'event' ? state.adm.events : state.adm.motiv, old = (list.find(r => r.row === row) || {}).v;
+  if (!old || !confirm('Удалить «' + (kind === 'event' ? old[3] : old[1]) + '»?')) return;
+  admSend({ kind, row, del: true, check: kind === 'event' ? old[3] : old[1] }, 'Удалено');
 }
 
 /* ---------- Push-уведомления ---------- */
@@ -472,7 +596,7 @@ function render() {
     <button class="bell" onclick="go('notes')" aria-label="Уведомления">${BELL}${cnt ? `<b>${cnt}</b>` : ''}</button>
     <select onchange="load(this.value)">${d.months.map(m => `<option ${m === d.tab ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
     <button class="icon-btn" onclick="logout()">Выйти</button></header>${state.syncing ? '<div class="syncbar">обновляю…</div>' : state.offline ? '<div class="syncbar off">нет связи — показаны сохранённые данные</div>' : ''}`;
-  const body = { notes: viewNotes, my: viewMy, all: viewAll, plans: viewPlans, motiv: viewMotiv, pay: viewPay, resp: viewResp, team: viewTeam }[state.view]();
+  const body = { admin: viewAdmin, motForm: viewMotForm, evForm: viewEvForm, notes: viewNotes, my: viewMy, all: viewAll, plans: viewPlans, motiv: viewMotiv, pay: viewPay, resp: viewResp, team: viewTeam }[state.view]();
   $('#app').innerHTML = head + body;
   const sel = document.querySelector('.chip.sel'); if (sel) sel.scrollIntoView({ inline: 'center', block: 'nearest' });
 }
@@ -596,7 +720,7 @@ function viewMotiv() {
   const d = state.data, list = d.motivation || [];
   const isC = x => String(x.type).toLowerCase().indexOf('конкурс') === 0;
   const bon = list.filter(x => !isC(x)), con = list.filter(isC);
-  let h = '<h2>Мотивация</h2>';
+  let h = '<h2>Мотивация</h2>' + (d.isAdmin ? `<div class="admbtns"><button class="pbtn" onclick="openMotForm()">+ Мотивация</button><button class="pbtn" onclick="openEvForm()">+ Мероприятие</button></div><button class="backb" style="margin:4px 0 8px" onclick="state.adm=null;go('admin')">Все мотивации и мероприятия — изменить или удалить ›</button>` : '');
   if (!list.length) return h + '<div class="empty">Сейчас нет активных бонусов и конкурсов</div>';
   if (bon.length) h += '<div class="sec">Бонусы за план</div>' + bon.map(x => motCard(x, d.isAdmin, list.indexOf(x))).join('');
   if (con.length) h += '<div class="sec">Конкурсы и акции</div>' + con.map(x => motCard(x, d.isAdmin, list.indexOf(x))).join('');
